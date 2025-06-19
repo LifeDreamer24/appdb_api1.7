@@ -2,20 +2,13 @@ name: CI
 
 on:
   push:
-    branches:
-      - master
-      - main
+    branches: [main, master]
   pull_request:
-    branches:
-      - master
-      - main
+    branches: [main, master]
 
 jobs:
   build:
     runs-on: macos-latest
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,19 +16,16 @@ jobs:
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v2
         with:
-          xcode-version: '15'  # or specify the version you're using
+          xcode-version: '15.2'  # Adjust based on your project's needs
 
-      - name: Install Dependencies (CocoaPods)
-        if: exists('Podfile')
+      - name: Install CocoaPods dependencies (if Podfile exists)
         run: |
-          sudo gem install cocoapods
-          pod install
+          if [ -f "Podfile" ]; then
+            sudo gem install cocoapods
+            pod install
+          fi
 
-      # If you're using Swift Package Manager instead, uncomment:
-      # - name: Resolve Swift Packages
-      #   run: swift package resolve
-
-      - name: Build
+      - name: Build app
         run: |
           xcodebuild \
             -project appdb.xcodeproj \
@@ -46,15 +36,17 @@ jobs:
             ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Run Tests
-        if: |
-          test -d appdbTests || test -d appdbUITests
+      - name: Run tests if test targets exist
         run: |
-          xcodebuild \
-            -project appdb.xcodeproj \
-            -scheme appdb \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 14,OS=17.4' \
-            test \
-            ONLY_ACTIVE_ARCH=YES \
-            CODE_SIGNING_ALLOWED=NO
+          if [ -d "appdbTests" ] || [ -d "appdbUITests" ]; then
+            xcodebuild \
+              -project appdb.xcodeproj \
+              -scheme appdb \
+              -sdk iphonesimulator \
+              -destination 'platform=iOS Simulator,name=iPhone 14,OS=17.4' \
+              test \
+              ONLY_ACTIVE_ARCH=YES \
+              CODE_SIGNING_ALLOWED=NO
+          else
+            echo "No test targets found. Skipping test step."
+          fi
