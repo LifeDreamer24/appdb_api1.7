@@ -1,4 +1,4 @@
-name: iOS CI
+name: iOS Build CI
 
 on:
   push:
@@ -18,21 +18,41 @@ jobs:
         with:
           xcode-version: '15.2'
 
-      - name: Install CocoaPods if needed
+      - name: Install CocoaPods if Podfile exists
         run: |
           if [ -f "Podfile" ]; then
+            echo "Installing CocoaPods..."
             sudo gem install cocoapods
             pod install
+          else
+            echo "No Podfile found. Skipping pod install."
           fi
 
-      - name: Build with xcodebuild
+      - name: Detect and build the correct project
         run: |
-          xcodebuild \
-            -workspace appdb.xcworkspace \
-            -scheme appdb \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 14,OS=17.4' \
-            clean build \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+          if [ -f "appdb.xcworkspace" ]; then
+            echo "Using workspace build"
+            xcodebuild \
+              -workspace appdb.xcworkspace \
+              -scheme appdb \
+              -sdk iphonesimulator \
+              -destination 'platform=iOS Simulator,name=iPhone 14,OS=17.4' \
+              clean build \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO
+          elif [ -f "appdb.xcodeproj/project.pbxproj" ]; then
+            echo "Using xcodeproj build"
+            xcodebuild \
+              -project appdb.xcodeproj \
+              -scheme appdb \
+              -sdk iphonesimulator \
+              -destination 'platform=iOS Simulator,name=iPhone 14,OS=17.4' \
+              clean build \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO
+          else
+            echo "❌ No valid Xcode project found!"
+            exit 1
+          fi
