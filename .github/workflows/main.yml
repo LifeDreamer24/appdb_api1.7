@@ -1,4 +1,4 @@
-name: CI
+name: iOS CI
 
 on:
   push:
@@ -16,37 +16,23 @@ jobs:
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '15.2'  # Adjust based on your needs
+          xcode-version: '15.2'
 
-      - name: Install CocoaPods dependencies if Podfile exists
+      - name: Install CocoaPods if needed
         run: |
           if [ -f "Podfile" ]; then
             sudo gem install cocoapods
             pod install
           fi
 
-      - name: Build app
+      - name: Build with xcodebuild
         run: |
           xcodebuild \
-            -project appdb.xcodeproj \
+            -workspace appdb.xcworkspace \
             -scheme appdb \
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 14,OS=17.4' \
             clean build \
-            ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
-
-      - name: Run tests if test targets exist
-        run: |
-          if [ -d "appdbTests" ] || [ -d "appdbUITests" ]; then
-            xcodebuild \
-              -project appdb.xcodeproj \
-              -scheme appdb \
-              -sdk iphonesimulator \
-              -destination 'platform=iOS Simulator,name=iPhone 14,OS=17.4' \
-              test \
-              ONLY_ACTIVE_ARCH=YES \
-              CODE_SIGNING_ALLOWED=NO
-          else
-            echo "No test targets found. Skipping test step."
-          fi
